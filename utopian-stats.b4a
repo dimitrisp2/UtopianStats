@@ -1,0 +1,109 @@
+﻿Build1=Default,b4a.example
+File1=main.bal
+FileGroup1=Default Group
+Group=Default Group
+IconFile=
+Library1=core
+Library2=okhttputils2
+Library3=json
+Library4=dateutils
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="5" android:targetSdkVersion="26"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.DarkTheme)~\n~'End of default text.~\n~
+NumberOfFiles=1
+NumberOfLibraries=4
+NumberOfModules=0
+Version=8.3
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: Utopian Stats
+	#VersionCode: 1
+	#VersionName: autoconf
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: True
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: True
+#End Region
+
+Sub Process_Globals
+	'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+
+End Sub
+
+Sub Globals
+	'These global variables will be redeclared each time the activity is created.
+	'These variables can only be accessed from this module.
+	Private lvShow As ListView
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	'Do not forget to load the layout file created with the visual designer. For example:
+	Activity.LoadLayout("main")
+	Dim job As HttpJob
+	job.Initialize("getunreviewed", Me)
+	job.Download("https://utopian.rocks/api/posts?status=unreviewed")
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+Sub JobDone(Job As HttpJob)
+    ProgressDialogHide
+  If Job.Success Then
+		If Job.JobName = "getunreviewed" Then
+			'            ParseJSON(Job.GetString)
+			Dim parser As JSONParser
+			parser.Initialize(Job.GetString)
+			Dim root As List = parser.NextArray
+			For Each colroot As Map In root
+				Log(colroot)
+				Dim total_comments As Int = colroot.Get("total_comments")
+				Dim valid_age As String = colroot.Get("valid_age")
+				Dim author As String = colroot.Get("author")
+				Dim created As String = colroot.Get("created")
+				Dim moderator As String = colroot.Get("moderator")
+				Dim comment_url As String = colroot.Get("comment_url")
+				Dim utopian_vote As Int = colroot.Get("utopian_vote")
+				Dim voted_on As String = colroot.Get("voted_on")
+				Dim repository As String = colroot.Get("repository")
+				Dim title As String = colroot.Get("title")
+				Dim url As String = colroot.Get("url")
+				Dim score As Int = colroot.Get("score")
+				Dim review_date As String = colroot.Get("review_date")
+				Dim total_votes As Int = colroot.Get("total_votes")
+				Dim is_vipo As String = colroot.Get("is_vipo")
+				Dim total_payout As Double = colroot.Get("total_payout")
+				Dim review_status As String = colroot.Get("review_status")
+				Dim beneficiaries_set As String = colroot.Get("beneficiaries_set")
+				Dim category As String = colroot.Get("category")
+				Dim staff_picked As String = colroot.Get("staff_picked")
+				Dim voting_weight As Double = colroot.Get("voting_weight")
+				Dim picked_by As String = colroot.Get("picked_by")
+				Dim status As String = colroot.Get("status")
+				'Log(title + " " + author + " " + score + " " + url)
+				Dim cuttitle As String
+				Dim ShortDate,DateArray() As String
+				If title.Length > 30 Then
+					cuttitle = title.SubString2(0,30).Trim & "..."
+				Else 
+					cuttitle = title
+				End If
+			
+				DateArray = Regex.Split(" ", created)
+				ShortDate = DateArray(0)
+				lvShow.AddTwoLines2(cuttitle & " by " & author, "D:" & ShortDate & " C:" & category, url)
+			Next           
+        End If
+  Else
+      Log( Job.ErrorMessage)
+  End If
+    Job.Release
+End Sub
