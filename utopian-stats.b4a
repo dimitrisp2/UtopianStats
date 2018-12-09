@@ -45,6 +45,9 @@ Sub Activity_Create(FirstTime As Boolean)
 	Dim job As HttpJob
 	job.Initialize("getunreviewed", Me)
 	job.Download("https://utopian.rocks/api/posts?status=unreviewed")
+	lvShow.TwoLinesLayout.ItemHeight = 50dip
+	lvShow.TwoLinesLayout.Label.TextSize = 15
+	lvShow.TwoLinesLayout.SecondLabel.TextSize = 10
 End Sub
 
 Sub Activity_Resume
@@ -90,16 +93,23 @@ Sub JobDone(Job As HttpJob)
 				Dim status As String = colroot.Get("status")
 				'Log(title + " " + author + " " + score + " " + url)
 				Dim cuttitle As String
-				Dim ShortDate,DateArray() As String
+				Dim ShortDate,UnderReview,DateArray() As String
+				
 				If title.Length > 30 Then
 					cuttitle = title.SubString2(0,30).Trim & "..."
 				Else 
 					cuttitle = title
 				End If
-			
+
+				If moderator = "" Then
+					UnderReview = "No"
+				Else
+					UnderReview = "Yes"
+				End If
+
 				DateArray = Regex.Split(" ", created)
 				ShortDate = DateArray(0)
-				lvShow.AddTwoLines2(cuttitle & " by " & author, "D:" & ShortDate & " C:" & category, url)
+				lvShow.AddTwoLines2(cuttitle & " by " & author, "D: " & ShortDate & " - C: " & category & " - R: " & UnderReview, url)
 			Next           
         End If
   Else
