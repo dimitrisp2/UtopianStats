@@ -1,4 +1,4 @@
-﻿Build1=Default,b4a.example
+﻿Build1=Default,eu.dimitrisp.utopianstats
 File1=main.bal
 FileGroup1=Default Group
 Group=Default Group
@@ -6,12 +6,12 @@ IconFile=
 Library1=core
 Library2=okhttputils2
 Library3=json
-Library4=dateutils
+Library4=picasso
 ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="5" android:targetSdkVersion="26"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.DarkTheme)~\n~'End of default text.~\n~
 NumberOfFiles=1
 NumberOfLibraries=4
 NumberOfModules=0
-Version=8.3
+Version=8.5
 @EndOfDesignText@
 #Region  Project Attributes 
 	#ApplicationLabel: Utopian Stats
@@ -36,18 +36,18 @@ End Sub
 Sub Globals
 	'These global variables will be redeclared each time the activity is created.
 	'These variables can only be accessed from this module.
-	Private lvShow As ListView
+	Private svPending As ScrollView
+	Private btnRefresh As Button
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
 	'Do not forget to load the layout file created with the visual designer. For example:
 	Activity.LoadLayout("main")
 	Dim job As HttpJob
+	ProgressDialogShow2("Fetching details, please wait...",False)
 	job.Initialize("getunreviewed", Me)
-	job.Download("https://utopian.rocks/api/posts?status=unreviewed")
-	lvShow.TwoLinesLayout.ItemHeight = 50dip
-	lvShow.TwoLinesLayout.Label.TextSize = 15
-	lvShow.TwoLinesLayout.SecondLabel.TextSize = 10
+	job.Download("https://dimitrisp.eu/u.json")
+	'job.Download("https://utopian.rocks/api/posts?status=unreviewed")
 End Sub
 
 Sub Activity_Resume
@@ -59,41 +59,53 @@ Sub Activity_Pause (UserClosed As Boolean)
 End Sub
 
 Sub JobDone(Job As HttpJob)
-    ProgressDialogHide
+  ProgressDialogHide
   If Job.Success Then
 		If Job.JobName = "getunreviewed" Then
-			'            ParseJSON(Job.GetString)
+			svPending.Invalidate
+			' Map svPending to Panel0
+			Dim Panel0 As Panel
+			Panel0 = svPending.Panel
+			Panel0.Color=Colors.Gray
+			' Will be used to modify each entry's visual
+			Dim PanelTop, Label2Top, PanelTop, PanelHeight As Int
+			PanelTop=0
+			
+			' Initiate JSON parser
 			Dim parser As JSONParser
 			parser.Initialize(Job.GetString)
 			Dim root As List = parser.NextArray
+			
 			For Each colroot As Map In root
-				Log(colroot)
-				Dim total_comments As Int = colroot.Get("total_comments")
-				Dim valid_age As String = colroot.Get("valid_age")
+				' Variables are self-explained by their names
+				'Dim total_comments As Int = colroot.Get("total_comments")
+				'Dim valid_age As String = colroot.Get("valid_age")
 				Dim author As String = colroot.Get("author")
 				Dim created As String = colroot.Get("created")
 				Dim moderator As String = colroot.Get("moderator")
-				Dim comment_url As String = colroot.Get("comment_url")
-				Dim utopian_vote As Int = colroot.Get("utopian_vote")
-				Dim voted_on As String = colroot.Get("voted_on")
-				Dim repository As String = colroot.Get("repository")
+				'Dim comment_url As String = colroot.Get("comment_url")
+				'Dim utopian_vote As Int = colroot.Get("utopian_vote")
+				'Dim voted_on As String = colroot.Get("voted_on")
+				'Dim repository As String = colroot.Get("repository")
 				Dim title As String = colroot.Get("title")
 				Dim url As String = colroot.Get("url")
-				Dim score As Int = colroot.Get("score")
-				Dim review_date As String = colroot.Get("review_date")
-				Dim total_votes As Int = colroot.Get("total_votes")
-				Dim is_vipo As String = colroot.Get("is_vipo")
-				Dim total_payout As Double = colroot.Get("total_payout")
-				Dim review_status As String = colroot.Get("review_status")
-				Dim beneficiaries_set As String = colroot.Get("beneficiaries_set")
+				'Dim score As Int = colroot.Get("score")
+				'Dim review_date As String = colroot.Get("review_date")
+				'Dim total_votes As Int = colroot.Get("total_votes")
+				'Dim is_vipo As String = colroot.Get("is_vipo")
+				'Dim total_payout As Double = colroot.Get("total_payout")
+				'Dim review_status As String = colroot.Get("review_status")
+				'Dim beneficiaries_set As String = colroot.Get("beneficiaries_set")
 				Dim category As String = colroot.Get("category")
-				Dim staff_picked As String = colroot.Get("staff_picked")
-				Dim voting_weight As Double = colroot.Get("voting_weight")
-				Dim picked_by As String = colroot.Get("picked_by")
-				Dim status As String = colroot.Get("status")
-				'Log(title + " " + author + " " + score + " " + url)
-				Dim cuttitle As String
-				Dim ShortDate,UnderReview,DateArray() As String
+				'Dim staff_picked As String = colroot.Get("staff_picked")
+				'Dim voting_weight As Double = colroot.Get("voting_weight")
+				'Dim picked_by As String = colroot.Get("picked_by")
+				'Dim status As String = colroot.Get("status")
+				Dim cuttitle As String ' To be used for shorting the title
+				Dim ShortDate,UnderReview,DateArray() As String ' Date & Review variables
+				Dim AuthorImage As ImageView
+				Dim PicassoHandler As Picasso
+				Dim ReviewColor As String
 				
 				If title.Length > 30 Then
 					cuttitle = title.SubString2(0,30).Trim & "..."
@@ -103,17 +115,59 @@ Sub JobDone(Job As HttpJob)
 
 				If moderator = "" Then
 					UnderReview = "No"
+					ReviewColor = Colors.Red
 				Else
-					UnderReview = "Yes"
+					UnderReview = moderator
+					ReviewColor = Colors.Green
 				End If
 
 				DateArray = Regex.Split(" ", created)
 				ShortDate = DateArray(0)
-				lvShow.AddTwoLines2(cuttitle & " by " & author, "D: " & ShortDate & " - C: " & category & " - R: " & UnderReview, url)
-			Next           
+				
+				Dim Panel1 As Panel ' To be added inside the ScrollView Panel.
+				Panel1.Initialize("")
+				
+				Panel1.Color=Colors.Black
+				PanelHeight = 74dip
+				Label2Top=40dip
+				Panel0.AddView(Panel1,0,PanelTop,svPending.Width,PanelHeight)
+				
+				Dim Label1, Label2, Label3 As Label
+				Label1.Initialize("")
+				Panel1.AddView(Label1,80dip,5dip,Panel0.Width-80dip,30dip)
+				Label1.Color=Colors.Black
+
+				Label1.Tag="lblContribution"
+				Label1.Text=cuttitle & " by " & author
+				
+				Label2.Initialize("")
+				Panel1.AddView(Label2,80dip,Label2Top,Panel0.Width-80dip,30dip)
+				Label2.TextSize=14
+				Label2.Tag="lblDetails"
+				Label2.Text="D: " & ShortDate & " - C: " & category & " - R: " & UnderReview
+				Label2.TextSize=14
+				
+				Label3.Initialize("")
+				Panel1.AddView(Label3, Panel1.Width-2dip, 0dip, 2dip, PanelHeight)
+				Label3.Color = ReviewColor
+				
+				AuthorImage.Initialize("")
+				Panel1.AddView(AuthorImage,5dip,5dip,65dip,65dip)
+				PicassoHandler.Initialize
+				PicassoHandler.LoadUrl("https://cdn.steemitimages.com/u/"&author&"/avatar").IntoImageView(AuthorImage)
+				PanelTop=PanelTop+PanelHeight+1dip
+			Next
+			Panel0.Height=PanelTop
         End If
   Else
       Log( Job.ErrorMessage)
   End If
     Job.Release
+End Sub
+
+Sub btnRefresh_Click
+	Dim job As HttpJob
+	ProgressDialogShow2("Fetching details, please wait...",False)
+	job.Initialize("getunreviewed", Me)
+	job.Download("https://dimitrisp.eu/u.json")
 End Sub
