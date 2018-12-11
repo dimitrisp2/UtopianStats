@@ -11,9 +11,10 @@ Library1=core
 Library2=okhttputils2
 Library3=json
 Library4=picasso
+Library5=reflection
 ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="5" android:targetSdkVersion="26"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.DarkTheme)~\n~'End of default text.~\n~
 NumberOfFiles=3
-NumberOfLibraries=4
+NumberOfLibraries=5
 NumberOfModules=0
 Version=8.5
 @EndOfDesignText@
@@ -27,8 +28,8 @@ Version=8.5
 #End Region
 
 #Region  Activity Attributes 
-	#FullScreen: False
-	#IncludeTitle: True
+	#FullScreen: True
+	#IncludeTitle: False
 #End Region
 
 Sub Process_Globals
@@ -61,7 +62,6 @@ Sub Activity_Pause (UserClosed As Boolean)
 End Sub
 
 Sub JobDone(Job As HttpJob)
-  ProgressDialogHide
   If Job.Success Then
 		If Job.JobName = "getunreviewed" Then
 			svPending.Invalidate
@@ -90,7 +90,7 @@ Sub JobDone(Job As HttpJob)
 				'Dim voted_on As String = colroot.Get("voted_on")
 				'Dim repository As String = colroot.Get("repository")
 				Dim title As String = colroot.Get("title")
-				'Dim url As String = colroot.Get("url")
+				Dim url As String = colroot.Get("url")
 				'Dim score As Int = colroot.Get("score")
 				'Dim review_date As String = colroot.Get("review_date")
 				'Dim total_votes As Int = colroot.Get("total_votes")
@@ -135,12 +135,12 @@ Sub JobDone(Job As HttpJob)
 				Panel0.AddView(Panel1,0,PanelTop,svPending.Width,PanelHeight)
 				
 				Dim Label1, Label2, Label3 As Label
-				Label1.Initialize("")
+				Label1.Initialize("Label1")
 				Panel1.AddView(Label1,80dip,5dip,Panel0.Width-80dip,30dip)
 				Label1.Color=Colors.Black
 				Label1.TextColor = Colors.White
 
-				Label1.Tag="lblContribution"
+				Label1.Tag=url
 				Label1.Text=cuttitle & " by " & author
 				
 				Label2.Initialize("")
@@ -181,7 +181,7 @@ Sub JobDone(Job As HttpJob)
 			Dim root As List = parser.NextArray
 			For Each colroot As Map In root
 				'Dim total_comments As Int = colroot.Get("total_comments")
-				'Dim valid_age As String = colroot.Get("valid_age")
+				Dim valid_age As String = colroot.Get("valid_age")
 				Dim author As String = colroot.Get("author")
 				Dim created As String = colroot.Get("created")
 				Dim moderator As String = colroot.Get("moderator")
@@ -190,7 +190,7 @@ Sub JobDone(Job As HttpJob)
 				'Dim voted_on As String = colroot.Get("voted_on")
 				'Dim repository As String = colroot.Get("repository")
 				Dim title As String = colroot.Get("title")
-				'Dim url As String = colroot.Get("url")
+				Dim url As String = colroot.Get("url")
 				Dim score As Double = colroot.Get("score")
 				'Dim review_date As String = colroot.Get("review_date")
 				'Dim total_votes As Int = colroot.Get("total_votes")
@@ -215,6 +215,11 @@ Sub JobDone(Job As HttpJob)
 					cuttitle = title
 				End If
 
+				If valid_age = "true" Then
+					ReviewColor = Colors.Green
+				Else
+					ReviewColor = Colors.Red
+				End If
 				DateArray = Regex.Split(" ", created)
 				ShortDate = DateArray(0)
 				
@@ -227,11 +232,11 @@ Sub JobDone(Job As HttpJob)
 				Panel2.AddView(Panel1,0,PanelTop2,svUpvote.Width,PanelHeight2)
 				
 				Dim Label1, Label2, Label3 As Label
-				Label1.Initialize("")
+				Label1.Initialize("Label1")
 				Panel1.AddView(Label1,80dip,5dip,Panel2.Width-80dip,30dip)
 				Label1.Color=Colors.Black
 				Label1.TextColor = Colors.White
-				Label1.Tag="lblContribution"
+				Label1.Tag=url
 				Label1.Text=cuttitle & " by " & author
 				
 				Label2.Initialize("")
@@ -241,6 +246,10 @@ Sub JobDone(Job As HttpJob)
 				Label2.Text="S: " & score & " - C: " & category & " - R: " & moderator
 				Label2.TextSize=14
 				
+				Label3.Initialize("")
+				Panel1.AddView(Label3, Panel1.Width-2dip, 0dip, 2dip, PanelHeight2)
+				Label3.Color = ReviewColor
+				
 				AuthorImage.Initialize("")
 				Panel1.AddView(AuthorImage,5dip,5dip,65dip,65dip)
 				PicassoHandler.Initialize
@@ -248,6 +257,7 @@ Sub JobDone(Job As HttpJob)
 				PanelTop2=PanelTop2+PanelHeight2+1dip
 			Next
 			Panel2.Height=PanelTop2
+			ProgressDialogHide
         End If
   Else
       Log( Job.ErrorMessage)
@@ -260,6 +270,14 @@ Sub btnRefresh_Click
 	ProgressDialogShow2("Fetching details, please wait...",False)
 	job.Initialize("getunreviewed", Me)
 	job.Download("https://utopian.rocks/api/posts?status=unreviewed")
+End Sub
+
+Sub Label1_Click
+	Dim lbSend As Label
+	lbSend = Sender
+	Dim i As Intent
+	i.Initialize(i.ACTION_VIEW, lbSend.tag)
+	StartActivity(i)
 End Sub
 
 Sub SetupUi
