@@ -1,6 +1,10 @@
 ﻿Build1=Default,eu.dimitrisp.utopianstats
 File1=main.bal
+File2=pending.bal
+File3=reviewed.bal
 FileGroup1=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
 Group=Default Group
 IconFile=
 Library1=core
@@ -8,7 +12,7 @@ Library2=okhttputils2
 Library3=json
 Library4=picasso
 ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: https://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="5" android:targetSdkVersion="26"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~CreateResourceFromFile(Macro, Themes.DarkTheme)~\n~'End of default text.~\n~
-NumberOfFiles=1
+NumberOfFiles=3
 NumberOfLibraries=4
 NumberOfModules=0
 Version=8.5
@@ -18,7 +22,7 @@ Version=8.5
 	#VersionCode: 1
 	#VersionName: autoconf
 	'SupportedOrientations possible values: unspecified, landscape or portrait.
-	#SupportedOrientations: unspecified
+	#SupportedOrientations: portrait
 	#CanInstallToExternalStorage: True
 #End Region
 
@@ -38,16 +42,14 @@ Sub Globals
 	'These variables can only be accessed from this module.
 	Private svPending As ScrollView
 	Private btnRefresh As Button
+	Private TabHost1 As TabHost
+	Private svUpvote As ScrollView
 End Sub
 
 Sub Activity_Create(FirstTime As Boolean)
-	'Do not forget to load the layout file created with the visual designer. For example:
 	Activity.LoadLayout("main")
-	Dim job As HttpJob
-	ProgressDialogShow2("Fetching details, please wait...",False)
-	job.Initialize("getunreviewed", Me)
-	job.Download("https://dimitrisp.eu/u.json")
-	'job.Download("https://utopian.rocks/api/posts?status=unreviewed")
+	SetupUi
+	btnRefresh_Click
 End Sub
 
 Sub Activity_Resume
@@ -88,7 +90,7 @@ Sub JobDone(Job As HttpJob)
 				'Dim voted_on As String = colroot.Get("voted_on")
 				'Dim repository As String = colroot.Get("repository")
 				Dim title As String = colroot.Get("title")
-				Dim url As String = colroot.Get("url")
+				'Dim url As String = colroot.Get("url")
 				'Dim score As Int = colroot.Get("score")
 				'Dim review_date As String = colroot.Get("review_date")
 				'Dim total_votes As Int = colroot.Get("total_votes")
@@ -136,6 +138,7 @@ Sub JobDone(Job As HttpJob)
 				Label1.Initialize("")
 				Panel1.AddView(Label1,80dip,5dip,Panel0.Width-80dip,30dip)
 				Label1.Color=Colors.Black
+				Label1.TextColor = Colors.White
 
 				Label1.Tag="lblContribution"
 				Label1.Text=cuttitle & " by " & author
@@ -158,6 +161,93 @@ Sub JobDone(Job As HttpJob)
 				PanelTop=PanelTop+PanelHeight+1dip
 			Next
 			Panel0.Height=PanelTop
+			Dim Job As HttpJob
+			Job.Initialize("getreviewed", Me)
+			Job.Download("https://utopian.rocks/api/posts?status=pending")
+		Else If Job.JobName = "getreviewed" Then
+			
+			svUpvote.Invalidate
+			' Map svUpvote to Panel2
+			Dim Panel2 As Panel
+			Panel2 = svUpvote.Panel
+			Panel2.Color=Colors.Gray
+			' Will be used to modify each entry's visual
+			Dim PanelTop2, Label2Top2, PanelHeight2 As Int
+			PanelTop2=0
+			
+			' Initiate JSON parser
+			Dim parser As JSONParser
+			parser.Initialize(Job.GetString)
+			Dim root As List = parser.NextArray
+			For Each colroot As Map In root
+				'Dim total_comments As Int = colroot.Get("total_comments")
+				'Dim valid_age As String = colroot.Get("valid_age")
+				Dim author As String = colroot.Get("author")
+				Dim created As String = colroot.Get("created")
+				Dim moderator As String = colroot.Get("moderator")
+				'Dim comment_url As String = colroot.Get("comment_url")
+				'Dim utopian_vote As Int = colroot.Get("utopian_vote")
+				'Dim voted_on As String = colroot.Get("voted_on")
+				'Dim repository As String = colroot.Get("repository")
+				Dim title As String = colroot.Get("title")
+				'Dim url As String = colroot.Get("url")
+				Dim score As Double = colroot.Get("score")
+				'Dim review_date As String = colroot.Get("review_date")
+				'Dim total_votes As Int = colroot.Get("total_votes")
+				'Dim is_vipo As String = colroot.Get("is_vipo")
+				'Dim total_payout As Double = colroot.Get("total_payout")
+				'Dim review_status As String = colroot.Get("review_status")
+				'Dim beneficiaries_set As String = colroot.Get("beneficiaries_set")
+				Dim category As String = colroot.Get("category")
+				'Dim staff_picked As String = colroot.Get("staff_picked")
+				'Dim voting_weight As Double = colroot.Get("voting_weight")
+				'Dim picked_by As String = colroot.Get("picked_by")
+				'Dim status As String = colroot.Get("status")
+				Dim cuttitle As String ' To be used for shorting the title
+				Dim ShortDate,DateArray() As String ' Date & Review variables
+				Dim AuthorImage As ImageView
+				Dim PicassoHandler As Picasso
+				Dim ReviewColor As String
+				
+				If title.Length > 30 Then
+					cuttitle = title.SubString2(0,30).Trim & "..."
+				Else
+					cuttitle = title
+				End If
+
+				DateArray = Regex.Split(" ", created)
+				ShortDate = DateArray(0)
+				
+				Dim Panel1 As Panel ' To be added inside the ScrollView Panel.
+				Panel1.Initialize("")
+				
+				Panel1.Color=Colors.Black
+				PanelHeight2 = 74dip
+				Label2Top2=40dip
+				Panel2.AddView(Panel1,0,PanelTop2,svUpvote.Width,PanelHeight2)
+				
+				Dim Label1, Label2, Label3 As Label
+				Label1.Initialize("")
+				Panel1.AddView(Label1,80dip,5dip,Panel2.Width-80dip,30dip)
+				Label1.Color=Colors.Black
+				Label1.TextColor = Colors.White
+				Label1.Tag="lblContribution"
+				Label1.Text=cuttitle & " by " & author
+				
+				Label2.Initialize("")
+				Panel1.AddView(Label2,80dip,Label2Top2,Panel2.Width-80dip,30dip)
+				Label2.TextSize=14
+				Label2.Tag="lblDetails"
+				Label2.Text="S: " & score & " - C: " & category & " - R: " & moderator
+				Label2.TextSize=14
+				
+				AuthorImage.Initialize("")
+				Panel1.AddView(AuthorImage,5dip,5dip,65dip,65dip)
+				PicassoHandler.Initialize
+				PicassoHandler.LoadUrl("https://cdn.steemitimages.com/u/"&author&"/avatar").IntoImageView(AuthorImage)
+				PanelTop2=PanelTop2+PanelHeight2+1dip
+			Next
+			Panel2.Height=PanelTop2
         End If
   Else
       Log( Job.ErrorMessage)
@@ -169,5 +259,14 @@ Sub btnRefresh_Click
 	Dim job As HttpJob
 	ProgressDialogShow2("Fetching details, please wait...",False)
 	job.Initialize("getunreviewed", Me)
-	job.Download("https://dimitrisp.eu/u.json")
+	job.Download("https://utopian.rocks/api/posts?status=unreviewed")
+End Sub
+
+Sub SetupUi
+	TabHost1.AddTab("Unreviewed", "pending.bal")
+	TabHost1.AddTab("Pending Vote", "reviewed.bal")
+End Sub
+
+Sub TabHost1_TabChanged
+
 End Sub
